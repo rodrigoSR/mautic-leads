@@ -11,8 +11,8 @@ export class Lead {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'mautic_id', unique: true, nullable: true })
-  mauticId: number;
+  @Column({ name: 'mautic_id', unique: true, nullable: true, type: 'int8' })
+  mauticId: number | null;
 
   @Column({ name: 'first_name' })
   firstName: string;

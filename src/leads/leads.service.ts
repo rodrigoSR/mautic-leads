@@ -34,9 +34,27 @@ export class LeadsService {
     });
 
     if (existingLead) {
-      //Insere qual a origem do tráfego na tabela campaign
-      //deve criar uma campanha ou esta campanha ja estara criada neste ponto ?
-      await this.mauticService.delete(existingLead.id);
+      const campaign = await this.campaingRepository.findOne({
+        where: {
+          userId: existingLead.id,
+        },
+      });
+      if (campaign) {
+        await this.campaingRepository.update(
+          {
+            id: campaign.id,
+          },
+          {
+            utmSource: createLeadDto.utmSource,
+            utmMedium: createLeadDto.utmMedium,
+            utmCampaign: createLeadDto.utmCampaign,
+            utmContent: createLeadDto.utmContent,
+          },
+        );
+      }
+
+      const mauticId = await this.mauticService.delete(existingLead.id);
+      await this.mauticService.addToSegment(createLeadDto.segmentId, mauticId);
       return 'Old user';
     }
 
@@ -58,9 +76,10 @@ export class LeadsService {
       userId: lead.id,
     });
 
-    const campaign = await this.campaingRepository.save(campaignData);
+    await this.campaingRepository.save(campaignData);
 
-    await this.mauticService.create(lead.id);
+    const mauticId = await this.mauticService.create(lead.id);
+    await this.mauticService.addToSegment(createLeadDto.segmentId, mauticId);
 
     return 'New user';
   }
