@@ -25,8 +25,6 @@ export class CreateLeadDto {
   @IsNotEmpty()
   ip: string;
 
-  segmentId: string;
-
   @IsOptional()
   @IsString()
   utmSource?: string;

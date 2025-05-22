@@ -54,7 +54,7 @@ export class LeadsService {
       }
 
       const mauticId = await this.mauticService.delete(existingLead.id);
-      await this.mauticService.addToSegment(createLeadDto.segmentId, mauticId);
+      await this.mauticService.addToSegment(mauticId);
       return 'Old user';
     }
 
@@ -79,7 +79,7 @@ export class LeadsService {
     await this.campaingRepository.save(campaignData);
 
     const mauticId = await this.mauticService.create(lead.id);
-    await this.mauticService.addToSegment(createLeadDto.segmentId, mauticId);
+    await this.mauticService.addToSegment(mauticId);
 
     return 'New user';
   }

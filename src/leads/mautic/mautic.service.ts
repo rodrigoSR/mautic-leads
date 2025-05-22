@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
 import { HttpService } from '@nestjs/axios';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lead } from '../entities/lead.entity';
@@ -16,8 +20,8 @@ export class MauticService {
     @InjectRepository(Lead)
     private leadRepository: Repository<Lead>,
   ) {
-    this.baseUrl = 'https://mautic-mads.gilix.com.br/api';
-    this.token = 'Bearer Y2xpZW50ZTpqR2FRbTh1OA==';
+    this.baseUrl = process.env.MAUTIC_URL || '';
+    this.token = process.env.MAUTIC_TOKEN || '';
   }
   async create(userId: number): Promise<number> {
     const lead = await this.leadRepository.findOne({
@@ -37,11 +41,12 @@ export class MauticService {
       overwriteWithBlank: true,
     };
     try {
+      const url = `${this.baseUrl}/contacts/new`;
       const response = await firstValueFrom(
-        this.httpService.post(`${this.baseUrl}/contacts/new`, payload, {
+        this.httpService.post(url, payload, {
           headers: {
-            Authorization: this.token,
             'Content-Type': 'application/json',
+            Authorization: `Basic ${this.token}`,
           },
         }),
       );
@@ -50,12 +55,13 @@ export class MauticService {
       await this.leadRepository.update({ id: userId }, { mauticId });
       return mauticId;
     } catch (error) {
-      console.error(
-        'Erro ao criar contato no Mautic:',
-
-        error.response?.data || error.message,
+      console.log(
+        JSON.stringify({
+          message: 'Error on create',
+          data: error.response?.data,
+        }),
       );
-      throw error;
+      throw new InternalServerErrorException();
     }
   }
 
@@ -76,7 +82,7 @@ export class MauticService {
           `${this.baseUrl}/contacts/${lead.mauticId}/delete`,
           {
             headers: {
-              Authorization: this.token, // ou Basic Auth
+              Authorization: `Basic ${this.token}`,
               'Content-Type': 'application/json',
             },
           },
@@ -87,33 +93,38 @@ export class MauticService {
       const mauticId = await this.create(userId);
       return mauticId;
     } catch (error) {
-      console.error(
-        'Erro ao deletar contato no Mautic:',
-
-        error.response?.data || error.message,
+      console.log(
+        JSON.stringify({
+          message: 'Error on delete',
+          data: error.response?.data,
+        }),
       );
       throw error;
     }
   }
 
-  async addToSegment(segmentId: string, contactId: number): Promise<void> {
+  async addToSegment(contactId: number): Promise<void> {
     try {
+      const segmentId = Number(process.env.MAUTIC_SEGMENT_ID || 0);
+      const url = `${this.baseUrl}/segments/${segmentId}/contact/${contactId}/add`;
       await firstValueFrom(
         this.httpService.post(
-          `${this.baseUrl}/segments/${segmentId}/contact/${contactId}/add`,
+          url,
+          {},
           {
             headers: {
-              Authorization: this.token, // ou Basic Auth
               'Content-Type': 'application/json',
+              Authorization: `Basic ${this.token}`,
             },
           },
         ),
       );
     } catch (error) {
-      console.error(
-        'Erro ao inserir contato no segmento:',
-
-        error.response?.data || error.message,
+      console.log(
+        JSON.stringify({
+          message: 'Error adicionar usuario no seguimento',
+          data: error.response?.data,
+        }),
       );
     }
   }
